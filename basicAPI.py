@@ -62,7 +62,20 @@ def get_all_users():
 # public_id used & passed in funct.
 @app.route('/user/<public_id>', methods=['GET'])
 def get_one_user(public_id):
-    return ''
+
+    #QUERY by public_id SPECIFIC USER only
+    user = User.query.filter_by(public_id=public_id).first()
+
+    if not user:
+        return jsonify({'message' : 'No user found!'})
+
+    user_data = {}
+    user_data['public_id'] = user.public_id
+    user_data['name'] = user.name
+    user_data['password'] = user.password
+    user_data['admin'] = user.admin
+
+    return jsonify({'user' : user_data})
 
 # Creating a new user
 @app.route('/user', methods=['POST'])
@@ -84,13 +97,32 @@ def create_user():
 # public_id used & passed in funct.
 @app.route('/user/<public_id>', methods=['PUT'])
 def promote_user(public_id):
-    return ''
+
+    user = User.query.filter_by(public_id=public_id).first()
+
+    if not user:
+        return jsonify({'message' : 'No user found!'})
+
+    user.admin = True
+    db.session.commit()
+
+    return jsonify({'message' : 'The user has been promoted!'})
+
 
 
 # public_id used & passed in funct.
 @app.route('/user/<public_id>', methods=['DELETE'])                         
-def delete_user(current_user, public_id):
-    return ''
+def delete_user(public_id):
+    
+    user = User.query.filter_by(public_id=public_id).first()
+
+    if not user:
+        return jsonify({'message' : 'No user found!'})
+
+    db.session.delete(user)
+    db.session.commit()
+
+    return jsonify({'message' : 'The user has been deleted!'})
 
 
 
