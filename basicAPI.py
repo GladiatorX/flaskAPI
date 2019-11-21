@@ -1,6 +1,10 @@
 import os
 from flask import Flask, request, jsonify
 from flask_sqlalchemy import SQLAlchemy
+import uuid
+from werkzeug.security import generate_password_hash, check_password_hash
+
+
 # This grabs our current directory
 basedir = os.path.abspath(os.path.dirname(__file__))
 
@@ -38,7 +42,20 @@ class Todo(db.Model):
 # Getting all user 
 @app.route('/user', methods=['GET'])  
 def get_all_users():
-    return ''
+    # Get all users
+    users = User.query.all()
+
+    output = []
+
+    for user in users:
+        user_data = {}
+        user_data['public_id'] = user.public_id
+        user_data['name'] = user.name
+        user_data['password'] = user.password
+        user_data['admin'] = user.admin
+        output.append(user_data)
+
+    return jsonify({'users' : output})
 
 
 # Getting specific user 
@@ -50,7 +67,17 @@ def get_one_user(public_id):
 # Creating a new user
 @app.route('/user', methods=['POST'])
 def create_user():
-    return ''    
+    # Here POSTMAN is sending username and password only
+    data = request.get_json()
+
+    hashed_password = generate_password_hash(data['password'], method='sha256')
+    #public_id and admin is set over here
+    new_user = User(public_id=str(uuid.uuid4()), name=data['name'], password=hashed_password, admin=False)
+    db.session.add(new_user)
+    db.session.commit()
+
+
+    return jsonify({'message' : 'New user created!'})
 
 
 # Changing user to admin (previlage by setting boolean to true)
@@ -58,7 +85,7 @@ def create_user():
 @app.route('/user/<public_id>', methods=['PUT'])
 def promote_user(public_id):
     return ''
-    
+
 
 # public_id used & passed in funct.
 @app.route('/user/<public_id>', methods=['DELETE'])                         
