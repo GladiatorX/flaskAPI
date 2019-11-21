@@ -5,6 +5,7 @@ import uuid
 from werkzeug.security import generate_password_hash, check_password_hash
 import jwt
 import datetime
+from functools import wraps
 
 # This grabs our current directory
 basedir = os.path.abspath(os.path.dirname(__file__))
@@ -37,6 +38,30 @@ class Todo(db.Model):
     text = db.Column(db.String(50))
     complete = db.Column(db.Boolean)
     user_id = db.Column(db.Integer)
+
+
+
+######Step 4 : Setting_up Decorator to enforce use of token provided by LOGIN(step3) Route################################
+def token_required(f):
+    @wraps(f)
+    def decorated(*args, **kwargs):
+        token = None
+
+        if 'x-access-token' in request.headers:
+            token = request.headers['x-access-token']
+
+        if not token:
+            return jsonify({'message' : 'Token is missing!'}), 401
+
+        try: 
+            data = jwt.decode(token, app.config['SECRET_KEY'])
+            current_user = User.query.filter_by(public_id=data['public_id']).first()
+        except:
+            return jsonify({'message' : 'Token is invalid!'}), 401
+
+        return f(current_user, *args, **kwargs)
+
+    return decorated
 
 
 ############################### SETTING UP ROUTE 2nd step##################################################
@@ -125,8 +150,14 @@ def delete_user(public_id):
 
     return jsonify({'message' : 'The user has been deleted!'})
 
-#################### SETTING UP AUTHORIZATION using http basic authentcation ##################
-#### this will return a TOKEN which is used for every subsequent API request####
+
+
+
+#################### 3rd step SETTING UP AUTHORIZATION using http basic authentcation ##################
+#### this will return a TOKEN which is used for every subsequent API request###################
+
+
+
 @app.route('/login')
 def login():
     #Getting auth info from API request
@@ -142,6 +173,7 @@ def login():
         return make_response('Could not verify', 401, {'WWW-Authenticate' : 'Basic realm="Login required!"'})
 
     '''sending token on success'''
+    '''check_password_hash is default py function to check it against salted pass'''
     if check_password_hash(user.password, auth.password):
         #token is combination of users public_id +SECRET_KEY __ 30  min token token expiration time
         token = jwt.encode({'public_id' : user.public_id, 'exp' : datetime.datetime.utcnow() + datetime.timedelta(minutes=30)}, app.config['SECRET_KEY'])
