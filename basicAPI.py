@@ -1,9 +1,10 @@
 import os
-from flask import Flask, request, jsonify
+from flask import Flask, request, jsonify,make_response
 from flask_sqlalchemy import SQLAlchemy
 import uuid
 from werkzeug.security import generate_password_hash, check_password_hash
-
+import jwt
+import datetime
 
 # This grabs our current directory
 basedir = os.path.abspath(os.path.dirname(__file__))
@@ -82,7 +83,7 @@ def get_one_user(public_id):
 def create_user():
     # Here POSTMAN is sending username and password only
     data = request.get_json()
-
+    
     hashed_password = generate_password_hash(data['password'], method='sha256')
     #public_id and admin is set over here
     new_user = User(public_id=str(uuid.uuid4()), name=data['name'], password=hashed_password, admin=False)
@@ -124,6 +125,32 @@ def delete_user(public_id):
 
     return jsonify({'message' : 'The user has been deleted!'})
 
+#################### SETTING UP AUTHORIZATION using http basic authentcation ##################
+#### this will return a TOKEN which is used for every subsequent API request####
+@app.route('/login')
+def login():
+    #Getting auth info from API request
+    auth = request.authorization
+    '''auth or auth.uname or auth.pass didn't match'''
+    if not auth or not auth.username or not auth.password:
+        return make_response('Could not verify', 401, {'WWW-Authenticate' : 'Basic realm="Login required!"'})
+                                #Postman's basic AUTH
+    user = User.query.filter_by(name=auth.username).first()
+
+    ''' auth.uname didn't match, user not present'''
+    if not user:
+        return make_response('Could not verify', 401, {'WWW-Authenticate' : 'Basic realm="Login required!"'})
+
+    '''sending token on success'''
+    if check_password_hash(user.password, auth.password):
+        #token is combination of users public_id +SECRET_KEY __ 30  min token token expiration time
+        token = jwt.encode({'public_id' : user.public_id, 'exp' : datetime.datetime.utcnow() + datetime.timedelta(minutes=30)}, app.config['SECRET_KEY'])
+
+        return jsonify({'token' : token.decode('UTF-8')})
+
+
+    ''' auth.pass didn't match, user not present'''
+    return make_response('Could not verify', 401, {'WWW-Authenticate' : 'Basic realm="Login required!"'})
 
 
 if __name__ == '__main__':
