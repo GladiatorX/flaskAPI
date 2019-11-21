@@ -34,5 +34,38 @@ class Todo(db.Model):
     user_id = db.Column(db.Integer)
 
 
+############################### SETTING UP ROUTE 2nd step##################################################
+# Getting all user 
+@app.route('/user', methods=['GET'])  
+def get_all_users():
+    return ''
+
+
+# Getting specific user 
+# public_id used & passed in funct.
+@app.route('/user/<public_id>', methods=['GET'])
+def get_one_user(public_id):
+    return ''
+
+# Creating a new user
+@app.route('/user', methods=['POST'])
+def create_user():
+    return ''    
+
+
+# Changing user to admin (previlage by setting boolean to true)
+# public_id used & passed in funct.
+@app.route('/user/<public_id>', methods=['PUT'])
+def promote_user(public_id):
+    return ''
+    
+
+# public_id used & passed in funct.
+@app.route('/user/<public_id>', methods=['DELETE'])                         
+def delete_user(current_user, public_id):
+    return ''
+
+
+
 if __name__ == '__main__':
     app.run(debug=True)
