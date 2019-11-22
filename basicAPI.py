@@ -41,11 +41,12 @@ class Todo(db.Model):
 
 
 
-######Step 4 : Setting_up Decorator to enforce use of token provided by LOGIN(step3) Route################################
+#######################Step 4 : Setting_up Decorator to enforce use of token provided by LOGIN(step3) Route###############
 def token_required(f):
     @wraps(f)
     def decorated(*args, **kwargs):
         token = None
+        #token always needs to be passed as header             ## <==>
 
         if 'x-access-token' in request.headers:
             token = request.headers['x-access-token']
@@ -54,11 +55,14 @@ def token_required(f):
             return jsonify({'message' : 'Token is missing!'}), 401
 
         try: 
+            #token + SECRET_KEY = __original__ data['public_id']             ## <==>
+
             data = jwt.decode(token, app.config['SECRET_KEY'])
             current_user = User.query.filter_by(public_id=data['public_id']).first()
         except:
             return jsonify({'message' : 'Token is invalid!'}), 401
 
+        # current_user is than needs to be passed all ROUTeS that req token access                                                  ## <==>
         return f(current_user, *args, **kwargs)
 
     return decorated
@@ -66,7 +70,7 @@ def token_required(f):
 
 ############################### SETTING UP ROUTE 2nd step##################################################
 # Getting all user 
-@app.route('/user', methods=['GET'])  
+@app.route('/user', methods=['GET'])
 def get_all_users():
     # Get all users
     users = User.query.all()
@@ -87,7 +91,8 @@ def get_all_users():
 # Getting specific user 
 # public_id used & passed in funct.
 @app.route('/user/<public_id>', methods=['GET'])
-def get_one_user(public_id):
+@token_required 
+def get_one_user(current_user,public_id):
 
     #QUERY by public_id SPECIFIC USER only
     user = User.query.filter_by(public_id=public_id).first()
@@ -105,7 +110,11 @@ def get_one_user(public_id):
 
 # Creating a new user
 @app.route('/user', methods=['POST'])
-def create_user():
+@token_required
+def create_user(current_user):
+    if not current_user.admin:
+        return jsonify({'message' : 'Cannot perform that function!'})
+
     # Here POSTMAN is sending username and password only
     data = request.get_json()
     
