@@ -110,10 +110,8 @@ def get_one_user(current_user,public_id):
 
 # Creating a new user
 @app.route('/user', methods=['POST'])
-@token_required
-def create_user(current_user):
-    if not current_user.admin:
-        return jsonify({'message' : 'Cannot perform that function!'})
+def create_user():
+
 
     # Here POSTMAN is sending username and password only
     data = request.get_json()
@@ -133,6 +131,9 @@ def create_user(current_user):
 @app.route('/user/<public_id>', methods=['PUT'])
 def promote_user(public_id):
 
+    if not current_user.admin:
+        return jsonify({'message' : 'Cannot perform that function!'})
+
     user = User.query.filter_by(public_id=public_id).first()
 
     if not user:
@@ -146,8 +147,12 @@ def promote_user(public_id):
 
 
 # public_id used & passed in funct.
-@app.route('/user/<public_id>', methods=['DELETE'])                         
-def delete_user(public_id):
+@app.route('/user/<public_id>', methods=['DELETE'])       
+@token_required                  
+def delete_user(current_user,public_id):
+
+    if not current_user.admin:
+        return jsonify({'message' : 'Cannot perform that function!'})
     
     user = User.query.filter_by(public_id=public_id).first()
 
